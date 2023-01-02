@@ -1,88 +1,92 @@
-from os import system
+import os, sys, re, time, threading, requests, tkinter
 from colorama import Fore, init, Style
-import requests
-import re
-import time
-import threading
 from proxy_checker import ProxyChecker
-from sys import stdout
+from tkinter import filedialog
 
+init(convert=True)
+root = tkinter.Tk()
+root.withdraw()
 lock = threading.Lock()
+
 class UI:
     @staticmethod
     def banner():
         banner = f'''
-    {Fore.LIGHTBLACK_EX}discord.gg/e8Qy8JKbUK{Style.RESET_ALL}
-    \t\t\t    ██╗  ██╗     ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
-    \t\t\t    ╚██╗██╔╝     ██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝
-    \t\t\t     ╚███╔╝█████╗██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝ 
-    \t\t\t     ██╔██╗╚════╝██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝  
-    \t\t\t    ██╔╝ ██╗     ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║   
-    \t\t\t    ╚═╝  ╚═╝     ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝  
-    \t\t\t                                            {Fore.LIGHTBLACK_EX}by Nightfall#2512{Style.RESET_ALL}
-    '''
+        \t\t\t\t██╗  ██╗     ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
+        \t\t\t\t╚██╗██╔╝     ██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝
+        \t\t\t\t ╚███╔╝█████╗██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝ 
+        \t\t\t\t ██╔██╗╚════╝██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝  
+        \t\t\t\t██╔╝ ██╗     ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║   
+        \t\t\t\t╚═╝  ╚═╝     ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝  
+        \t\t\t\t\t\t\b{Fore.LIGHTBLACK_EX}NightfallGT X Plasmonix {Style.RESET_ALL}
+        '''
         return banner
 
     @staticmethod
     def menu():
         menu = f'''
-        [{Fore.RED}1{Style.RESET_ALL}] Proxy Scrape
-        [{Fore.RED}2{Style.RESET_ALL}] Proxy Check
-        [{Fore.RED}3{Style.RESET_ALL}] Exit
-        '''
+[{Fore.LIGHTBLUE_EX}1{Style.RESET_ALL}] Scraper
+[{Fore.LIGHTBLUE_EX}2{Style.RESET_ALL}] Checker'''
         return menu
 
-def write(arg):
+def write(args):
     lock.acquire()
-    stdout.flush()
-    print(arg)
+    sys.stdout.flush()
+    print(args)
     lock.release()
+
+def animated(args):
+    l = ['|', '/', '-', '\\']
+    for i in l+l+l:
+        sys.stdout.write(f'\r[{Fore.LIGHTBLUE_EX}{i}{Style.RESET_ALL}] {args}')
+        sys.stdout.flush()
+        time.sleep(0.2)
 
 class XProxy:
     proxy_w_regex = [
-    ["http://spys.me/proxy.txt","%ip%:%port% "],
-    ["http://www.httptunnel.ge/ProxyListForFree.aspx"," target=\"_new\">%ip%:%port%</a>"],
-    ["https://raw.githubusercontent.com/sunny9577/proxy-scraper/master/proxies.json", "\"ip\":\"%ip%\",\"port\":\"%port%\","],
-    ["https://raw.githubusercontent.com/fate0/proxylist/master/proxy.list", '"host": "%ip%".*?"country": "(.*?){2}",.*?"port": %port%'],
-    ["https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list.txt", '%ip%:%port% (.*?){2}-.-S \\+'],
-    ["https://www.us-proxy.org/", "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
-    ["https://free-proxy-list.net/", "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
-    ["https://www.sslproxies.org/", "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
-    ['https://www.socks-proxy.net/', "%ip%:%port%"],
-    ['https://free-proxy-list.net/uk-proxy.html', "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
-    ['https://free-proxy-list.net/anonymous-proxy.html', "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
-    ["https://www.proxy-list.download/api/v0/get?l=en&t=https", '"IP": "%ip%", "PORT": "%port%",'],
-    ["https://api.proxyscrape.com/?request=getproxies&proxytype=http&timeout=6000&country=all&ssl=yes&anonymity=all", "%ip%:%port%"],
-    ["https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt", "%ip%:%port%"],
-    ["https://raw.githubusercontent.com/shiftytr/proxy-list/master/proxy.txt", "%ip%:%port%"],
-    ["https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt", "%ip%:%port%"],
-    ["https://www.hide-my-ip.com/proxylist.shtml", '"i":"%ip%","p":"%port%",'],
-    ["https://raw.githubusercontent.com/scidam/proxy-list/master/proxy.json", '"ip": "%ip%",\n.*?"port": "%port%",'],
-    ['https://www.freeproxychecker.com/result/socks4_proxies.txt', "%ip%:%port%"],
-    ['https://proxy50-50.blogspot.com/', '%ip%</a></td><td>%port%</td>'], 
-    ['http://free-fresh-proxy-daily.blogspot.com/feeds/posts/default', "%ip%:%port%"],
-    ['http://free-fresh-proxy-daily.blogspot.com/feeds/posts/default', "%ip%:%port%"],
-    ['http://www.live-socks.net/feeds/posts/default', "%ip%:%port%"],
-    ['http://www.socks24.org/feeds/posts/default', "%ip%:%port%"],
-    ['http://www.proxyserverlist24.top/feeds/posts/default',"%ip%:%port%" ] ,
-    ['http://proxysearcher.sourceforge.net/Proxy%20List.php?type=http',"%ip%:%port%"],
-    ['http://proxysearcher.sourceforge.net/Proxy%20List.php?type=socks', "%ip%:%port%"],
-    ['http://proxysearcher.sourceforge.net/Proxy%20List.php?type=socks', "%ip%:%port%"], 
-    ['https://www.my-proxy.com/free-anonymous-proxy.html', '%ip%:%port%'],
-    ['https://www.my-proxy.com/free-transparent-proxy.html', '%ip%:%port%'],
-    ['https://www.my-proxy.com/free-socks-4-proxy.html', '%ip%:%port%'],
-    ['https://www.my-proxy.com/free-socks-5-proxy.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-2.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-3.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-4.html', '%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-5.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-6.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-7.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-8.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-9.html','%ip%:%port%'],
-    ['https://www.my-proxy.com/free-proxy-list-10.html','%ip%:%port%'],
-    ]
+        ["http://spys.me/proxy.txt","%ip%:%port% "],
+        ["http://www.httptunnel.ge/ProxyListForFree.aspx"," target=\"_new\">%ip%:%port%</a>"],
+        ["https://raw.githubusercontent.com/sunny9577/proxy-scraper/master/proxies.json", "\"ip\":\"%ip%\",\"port\":\"%port%\","],
+        ["https://raw.githubusercontent.com/fate0/proxylist/master/proxy.list", '"host": "%ip%".*?"country": "(.*?){2}",.*?"port": %port%'],
+        ["https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list.txt", '%ip%:%port% (.*?){2}-.-S \\+'],
+        ["https://www.us-proxy.org/", "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
+        ["https://free-proxy-list.net/", "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
+        ["https://www.sslproxies.org/", "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
+        ['https://www.socks-proxy.net/', "%ip%:%port%"],
+        ['https://free-proxy-list.net/uk-proxy.html', "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
+        ['https://free-proxy-list.net/anonymous-proxy.html', "<tr><td>%ip%<\\/td><td>%port%<\\/td><td>(.*?){2}<\\/td><td class='hm'>.*?<\\/td><td>.*?<\\/td><td class='hm'>.*?<\\/td><td class='hx'>(.*?)<\\/td><td class='hm'>.*?<\\/td><\\/tr>"],
+        ["https://www.proxy-list.download/api/v0/get?l=en&t=https", '"IP": "%ip%", "PORT": "%port%",'],
+        ["https://api.proxyscrape.com/?request=getproxies&proxytype=http&timeout=6000&country=all&ssl=yes&anonymity=all", "%ip%:%port%"],
+        ["https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt", "%ip%:%port%"],
+        ["https://raw.githubusercontent.com/shiftytr/proxy-list/master/proxy.txt", "%ip%:%port%"],
+        ["https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt", "%ip%:%port%"],
+        ["https://www.hide-my-ip.com/proxylist.shtml", '"i":"%ip%","p":"%port%",'],
+        ["https://raw.githubusercontent.com/scidam/proxy-list/master/proxy.json", '"ip": "%ip%",\n.*?"port": "%port%",'],
+        ['https://www.freeproxychecker.com/result/socks4_proxies.txt', "%ip%:%port%"],
+        ['https://proxy50-50.blogspot.com/', '%ip%</a></td><td>%port%</td>'], 
+        ['http://free-fresh-proxy-daily.blogspot.com/feeds/posts/default', "%ip%:%port%"],
+        ['http://free-fresh-proxy-daily.blogspot.com/feeds/posts/default', "%ip%:%port%"],
+        ['http://www.live-socks.net/feeds/posts/default', "%ip%:%port%"],
+        ['http://www.socks24.org/feeds/posts/default', "%ip%:%port%"],
+        ['http://www.proxyserverlist24.top/feeds/posts/default',"%ip%:%port%" ] ,
+        ['http://proxysearcher.sourceforge.net/Proxy%20List.php?type=http',"%ip%:%port%"],
+        ['http://proxysearcher.sourceforge.net/Proxy%20List.php?type=socks', "%ip%:%port%"],
+        ['http://proxysearcher.sourceforge.net/Proxy%20List.php?type=socks', "%ip%:%port%"], 
+        ['https://www.my-proxy.com/free-anonymous-proxy.html', '%ip%:%port%'],
+        ['https://www.my-proxy.com/free-transparent-proxy.html', '%ip%:%port%'],
+        ['https://www.my-proxy.com/free-socks-4-proxy.html', '%ip%:%port%'],
+        ['https://www.my-proxy.com/free-socks-5-proxy.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-2.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-3.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-4.html', '%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-5.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-6.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-7.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-8.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-9.html','%ip%:%port%'],
+        ['https://www.my-proxy.com/free-proxy-list-10.html','%ip%:%port%'],
+                    ]
 
     proxy_direct = [
         'https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=all',
@@ -105,27 +109,75 @@ class XProxy:
         'http://ab57.ru/downloads/proxyold.txt',
         'https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt',
         'https://proxy-spider.com/api/proxies.example.txt',
+        'https://proxylist.live/nodes/socks4_1.php?page=1&showall=1',
+        'https://multiproxy.org/txt_all/proxy.txt',
         'https://raw.githubusercontent.com/opsxcq/proxy-list/master/list.txt',
         'https://www.proxy-list.download/api/v1/get?type=socks4'
-        'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt'
-        ]
+        'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt',
+        'https://raw.githubusercontent.com/almroot/proxylist/master/list.txt',
+        'https://raw.githubusercontent.com/jetkai/proxy-list/main/proxies-socks5.txt',
+        'https://raw.githubusercontent.com/jetkai/proxy-list/main/proxies-http.txt',
+        'https://raw.githubusercontent.com/almroot/proxylist/master/list.txt',
+        'https://raw.githubusercontent.com/jetkai/proxy-list/main/proxies-socks4.txt',
+        'https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt',
+        'https://raw.githubusercontent.com/r3xzt/proxy-list/main/all.txt',
+        'https://raw.githubusercontent.com/Volodichev/proxy-list/main/http.txt',
+        'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt',
+        'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt',
+        'https://raw.githubusercontent.com/mmpx12/proxy-list/master/http.txt',
+        'https://raw.githubusercontent.com/roma8ok/proxy-list/main/proxy-list-socks5.txt',
+        'https://raw.githubusercontent.com/roma8ok/proxy-list/main/proxy-list-http.txt',
+        'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies.txt',
+        'https://raw.githubusercontent.com/BlackSnowDot/proxylist-update-every-minute/main/http.txt',
+        'https://raw.githubusercontent.com/BlackSnowDot/proxylist-update-every-minute/main/https.txt',
+        'https://raw.githubusercontent.com/BlackSnowDot/proxylist-update-every-minute/main/proxy.txt',
+        'https://raw.githubusercontent.com/BlackSnowDot/proxylist-update-every-minute/main/socks.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/http.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/socks4.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_anonymous/socks5.txt',
+        'https://raw.githubusercontent.com/saschazesiger/Free-Proxies/master/proxies/socks4.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation/http.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation/socks4.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation/socks5.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation_anonymous/http.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation_anonymous/socks4.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation_anonymous/socks5.txt',
+        'https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt',
+        'https://raw.githubusercontent.com/saschazesiger/Free-Proxies/master/proxies/socks5.txt',
+        'https://github.com/mmpx12/proxy-list/blob/master/http.txt',
+        'https://github.com/mmpx12/proxy-list/blob/master/socks4.txt',
+        "https://www.freeproxychecker.com/result/socks5_proxies.txt",
+        'https://github.com/mmpx12/proxy-list/blob/master/socks5.txt',
+        'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/all.txt',
+        'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt',
+        'https://raw.githubusercontent.com/UserR3X/proxy-list/main/online/http.txt',
+        'https://raw.githubusercontent.com/UserR3X/proxy-list/main/online/https.txt',
+        'https://raw.githubusercontent.com/saisuiu/uiu/main/free.txt',
+        'https://raw.githubusercontent.com/proxy4parsing/proxy-list/main/http.txt',
+        'https://raw.githubusercontent.com/UptimerBot/proxy-list/main/proxies/socks5.txt',
+        'https://raw.githubusercontent.com/rdavydov/proxy-list/main/proxies/socks4.txt',
+        'https://raw.githubusercontent.com/UptimerBot/proxy-list/main/proxies/socks4.txt',
+    ]
                        
-
     headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"}
 
     def __init__(self):
         self.proxy_output = []
         self.scrape_counter = 0
         self.checked_counter= 0
+        self.alive_counter = 0
 
     def _update_title(self):
         while True:
             elapsed = time.strftime('%H:%M:%S', time.gmtime(time.time() - self.start))
-            system('title X-Proxy - Elapsed: %s ^| Scraped: %s ^| Checked :%s'% (elapsed, self.scrape_counter, self.checked_counter))
+            os.system('title X-Proxy - Elapsed: %s ^| Scraped: %s ^| Checked: %s ^| Alive: %s' % (elapsed, self.scrape_counter, self.checked_counter, self.alive_counter))
             time.sleep(0.4)
 
-    def file_read(self, name):
-        with open(name, 'r', encoding='UTF-8') as f:
+    def file_read(self, path):
+        with open(path.name, 'r', encoding='UTF-8') as f:
             text = [line.strip('\n') for line in f]
             return text
 
@@ -137,7 +189,6 @@ class XProxy:
     def background_task(self):
         self.start = time.time()
         threading.Thread(target = self._update_title, daemon=True).start()
-
 
     def get_proxies(self):
         return self.proxy_output
@@ -151,11 +202,11 @@ class ProxyScrape(XProxy):
 
             for proxy in re.findall(re.compile(custom_regex), proxylist):
                 self.proxy_output.append(proxy[0] + ":" + proxy[1])
-                write(' > '+proxy[0] + ":" + proxy[1])
+                write(f'{Fore.LIGHTBLUE_EX}[SCRAPED]{Style.RESET_ALL} {proxy[0]}:{proxy[1]}')
                 self.scrape_counter += 1
 
         except requests.exceptions.RequestException:
-            write('Requests related error occured.')
+            write(f'[{Fore.RED}ERROR{Style.RESET_ALL}] Requests related error occured.')
 
     def scrape_regex(self):
         for source in self.proxy_w_regex:
@@ -167,127 +218,101 @@ class ProxyScrape(XProxy):
                 page = requests.get(source, timeout=5, headers=self.headers).text
                 for proxy in re.findall(re.compile('([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}):([0-9]{1,5})'), page):
                     self.proxy_output.append(proxy[0] + ':' + proxy[1])
-                    write(' > '  + proxy[0] + ':' + proxy[1])
+                    write(f'{Fore.LIGHTBLUE_EX}[SCRAPED]{Style.RESET_ALL} {proxy[0]}:{proxy[1]}')
 
             except requests.exceptions.RequestException:
-                write('Requests related error occured.')
+                write(f'[{Fore.RED}ERROR{Style.RESET_ALL}] Requests related error occured.')
         
 
 class ProxyCheck(XProxy):
     def __init__(self):
         XProxy.__init__(self)
-        print('Loading..')
+        animated('Loading...')
         self.checker = ProxyChecker()
-        system('cls')
-
-
+        os.system('cls')
+        
     def check(self, list_, timeout=5):
         for x in list_:
             c = self.checker.check_proxy(x)
             if c:
-                write(Fore.GREEN + '[ALIVE] '+ x + ' | ' + c['anonymity'] + ' | ' + 'Timeout:'+ str(c['timeout']) + ' ' +c['country_code'] + Style.RESET_ALL + ' ' +  c['protocols'][0])
+                write(f"{Fore.GREEN}[ALIVE]{Style.RESET_ALL} {x} | Anonymity: {c['anonymity']}  | Timeout: {str(c['timeout'])} | Country: {c['country_code']} | Protocol: {c['protocols'][0]}")
                 with open('all_alive.txt', 'a', encoding='UTF-8') as f:
                     f.write(x + '\n')
+                    self.alive_counter += 1
 
                 if c['protocols'][0] == 'http':
                     with open('http_alive.txt', 'a', encoding='UTF-8') as f:
-                        f.write(x + '\n')                    
+                        f.write(x + '\n')                 
 
                 elif c['protocols'][0] == 'socks4':
                     with open('socks4_alive.txt', 'a', encoding='UTF-8') as f:
-                        f.write(x + '\n')     
+                        f.write(x + '\n')   
 
                 elif c['protocols'][0] == 'socks5':
                     with open('socks5_alive.txt', 'a', encoding='UTF-8') as f:
-                        f.write(x + '\n')   
+                        f.write(x + '\n') 
                 else:
                     pass
-
                 self.checked_counter += 1
    
             else:
-                write(Fore.RED + '[DEAD] ' + x + Style.RESET_ALL)
+                write(f"{Fore.RED}[DEAD]{Style.RESET_ALL} {x}")
                 with open('dead_proxies.txt', 'a', encoding='UTF-8') as f:
                     f.write(x + '\n')
                 self.checked_counter += 1
 
-
 def main():
     x = UI()
     p = ProxyScrape()
-    system('title X-Proxy by Nightfall#2512 ^| AIO Proxy Tool')
-    system('cls')
-
+    os.system('cls & mode 140,20 && title X-Proxy ^| AIO Proxy Tool')
     print(x.banner())
     print(x.menu())
-
-    print('\n')
-
     try:
-        user_input = int(input(f'[{Fore.RED}>{Style.RESET_ALL}] > '))
+        user_input = int(input(f'[{Fore.LIGHTBLUE_EX}?{Style.RESET_ALL}] Choice> '))
         if user_input == 1:
-            system('cls')
+            os.system('cls')
             print(x.banner())
             p.background_task()
-            print('Scraping proxies...')
+            animated('Scraping proxies...')
             p.scrape_regex()
             p.scrape_direct()
 
             output = p.get_proxies()
-
-            print('\nChecking for duplicates..')
-            print('Current length:', len(output))
+            animated('Checking for duplicates..')
+            print(f'[{Fore.GREEN}*{Style.RESET_ALL}] {len(output)}')
             clean_output = list(set(output))
-            print('Length after removing duplicates:', len(clean_output))
+            print(f'[{Fore.LIGHTBLUE_EX}+{Style.RESET_ALL}] Length after removing duplicates:', len(clean_output))
 
-            print('Writing to scraped.txt..')
+            animated('Writing to scraped.txt..')
             p.file_write('scraped.txt', clean_output)
-            print('Finished.')
-            system('pause>nul')
+            print(f'[{Fore.GREEN}+{Style.RESET_ALL}] Finished.')
+            os.system('pause>nul')
 
         elif user_input == 2:
             pc = ProxyCheck()
-
-            system('cls')
+            os.system('cls')
             print(x.banner())
-
-            path = input('Path: ')
-
-            if '"' in path:
-                new_path = path.replace('"','')
-
-            else:
-                new_path = path
-
-            proxy_list = pc.file_read(new_path)
-
-            thread_count = int(input('Enter number of threads [e.g 200] : '))
-            print('Loading..')
+            input(f'[{Fore.LIGHTBLUE_EX}#{Style.RESET_ALL}] Press ENTER to open proxy path')
+            path = filedialog.askopenfile(parent=root, mode='rb', title='Path', filetype=(('txt', '*.txt'), ('All files', '*.txt')))
+            proxy_list = pc.file_read(path)
+            thread_count = int(input(f'[{Fore.LIGHTBLUE_EX}>{Style.RESET_ALL}] Enter number of threads [e.g 200]: '))
+            animated('Loading..')
             threads = []
-            system('cls')
+            os.system('cls')
             print(x.banner())
-            
             pc.background_task()
-
             for i in range(thread_count):
                 t = threading.Thread(target=pc.check, args= (proxy_list[int(len(proxy_list) / thread_count * i): int(len(proxy_list)/ thread_count* (i+1))],))
                 threads.append(t)
                 t.start()
-
             for t in threads:
                 t.join()
-
-            print('Finished.')
-            system('pause>nul')
-            
+            print(f'[{Fore.GREEN}+{Style.RESET_ALL}] Finished.')
+            os.system('pause>nul')
         else:
-            print('Invalid!')
             main()
-
-
     except ValueError:
         main()
-
 
 if __name__ == '__main__':
     main()
